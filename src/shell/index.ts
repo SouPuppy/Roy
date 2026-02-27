@@ -1,8 +1,16 @@
 import { Command } from "commander";
 import { METADATA } from "@/meta";
-import { start } from "@/agent/main";
+import { start } from "@/node/main";
+import { wakeup } from "@/wizard/wakeup";
 
 const program = new Command();
+
+program
+  .command("wakeup")
+  .description("Initialize Roy for the first time")
+  .action(async () => {
+    await wakeup();
+  });
 
 program
   .command("start")

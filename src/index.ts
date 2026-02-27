@@ -15,10 +15,10 @@ function findWorkDir(): string {
 
 const workDir = findWorkDir();
 const homeDir = join(workDir, ".home");
-config({ path: join(homeDir, ".env") });
+config({ path: join(homeDir, ".env"), quiet: true });
 
 process.env.HOME_DIR = homeDir;
 if (!process.env.LOG_LEVEL) process.env.LOG_LEVEL = "debug";
 
 export { METADATA } from "@/meta";
-await import("@/cli");
+await import("@/shell");
