@@ -1,0 +1,9 @@
+# Node.js
+node_modules
+dist
+
+# MacOS
+.DS_Store
+
+# Editor
+.vscode
