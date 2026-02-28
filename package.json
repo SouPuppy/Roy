@@ -9,10 +9,11 @@
   "packageManager": "pnpm@10.29.2",
   "scripts": {
     "roy": "tsx src/index.ts",
-    "start": "HOME_DIR=$(pwd)/.home LOG_LEVEL=debug tsx src/index.ts start"
+    "start": "LOG_LEVEL=debug tsx src/index.ts start"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1",
+    "@iarna/toml": "^2.2.5",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
     "pino": "^10.3.1",

@@ -1,4 +1,19 @@
-[[self]]
+log_level = "debug"
 
+[host]
 ip = "127.0.0.1"
 port = 8080
+
+[agent]
+max_masters = 1
+max_slaves = 1
+
+[agent.root]
+provider = "default"
+
+[[providers]]
+name = "default"
+provider = ""
+api_key = ""
+input = "text"
+max_tokens = 4096

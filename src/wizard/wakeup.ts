@@ -5,12 +5,13 @@ import * as p from "@clack/prompts";
 import initSqlJs from "sql.js";
 import { log } from "@/logger";
 import { METADATA } from "@/meta";
+import { getHomeDir, setHomeDir } from "@/home";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_DIR = resolve(__dirname, "../template/home");
 
 async function initialize_home(): Promise<boolean> {
-  const defaultHome = process.env.HOME_DIR!;
+  const defaultHome = getHomeDir();
 
   if (existsSync(defaultHome)) {
     p.note(defaultHome, "Home dir already exists");
@@ -35,7 +36,7 @@ async function initialize_home(): Promise<boolean> {
   const targetHome = homeDir.trim();
   if (existsSync(targetHome)) {
     p.note(targetHome, "Home dir already exists");
-    process.env.HOME_DIR = targetHome;
+    setHomeDir(targetHome);
     return true;
   }
 
@@ -47,15 +48,15 @@ async function initialize_home(): Promise<boolean> {
   mkdirSync(join(targetHome, "toolbox"), { recursive: true });
 
   cpSync(TEMPLATE_DIR, targetHome, { recursive: true });
-  process.env.HOME_DIR = targetHome;
+  setHomeDir(targetHome);
 
   spinner.stop(`Home dir initialized at ${targetHome}`);
   return true;
 }
 
 async function initialize_database(): Promise<void> {
-  const HOME_DIR = process.env.HOME_DIR!;
-  const dbPath = join(HOME_DIR, "database.sqlite3");
+  const homeDir = getHomeDir();
+  const dbPath = join(homeDir, "database.sqlite3");
 
   const SQL = await initSqlJs();
   const db = existsSync(dbPath)

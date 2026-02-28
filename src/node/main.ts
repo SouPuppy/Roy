@@ -2,13 +2,14 @@ import { WebSocketServer } from "ws";
 import { createSession } from "./session";
 import { log } from "@/logger";
 import { parseJsonOrString } from "@/utils/parse-json";
+import { getHomeDir } from "@/home";
 
 const PORT = 50000;
 
 export function start(): void {
   const LOG_LEVEL = (process.env.LOG_LEVEL ?? "debug").toLowerCase();
-  const HOME_DIR = process.env.HOME_DIR ?? process.cwd();
-  log.info({ LOG_LEVEL, HOME_DIR }, "Starting");
+  const homeDir = getHomeDir();
+  log.info({ LOG_LEVEL, homeDir }, "Starting");
 
   const wss = new WebSocketServer({ port: PORT });
 
