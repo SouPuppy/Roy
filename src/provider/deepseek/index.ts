@@ -51,7 +51,11 @@ export async function getDeepSeekStatus(cfg: ProviderConfig): Promise<LlmStatus>
   }
 }
 
-export async function askDeepSeek(cfg: ProviderConfig, question: string): Promise<string> {
+export async function askDeepSeek(
+  cfg: ProviderConfig,
+  question: string,
+  context?: string,
+): Promise<string> {
   if (!cfg.api_key) {
     throw new Error("missing_api_key");
   }
@@ -64,7 +68,15 @@ export async function askDeepSeek(cfg: ProviderConfig, question: string): Promis
     },
     body: JSON.stringify({
       model: "deepseek-chat",
-      messages: [{ role: "user", content: question }],
+      messages: [
+        {
+          role: "system",
+          content: context
+            ? `You are Roy. Use the provided memory context when it is relevant.\n\nMemory Context:\n${context}`
+            : "You are Roy.",
+        },
+        { role: "user", content: question },
+      ],
       max_tokens: cfg.max_tokens ?? 1024,
     }),
   });
@@ -81,4 +93,36 @@ export async function askDeepSeek(cfg: ProviderConfig, question: string): Promis
     throw new Error("empty_response");
   }
   return answer;
+}
+
+export async function embedDeepSeek(cfg: ProviderConfig, text: string): Promise<number[]> {
+  if (!cfg.api_key) {
+    throw new Error("missing_api_key");
+  }
+
+  const res = await fetch("https://api.deepseek.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${cfg.api_key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      // configurable later; keep OpenAI-compatible default first
+      model: "text-embedding-3-small",
+      input: text,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`deepseek_embedding_http_${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    data?: Array<{ embedding?: number[] }>;
+  };
+  const embedding = data.data?.[0]?.embedding;
+  if (!embedding || embedding.length === 0) {
+    throw new Error("empty_embedding");
+  }
+  return embedding;
 }

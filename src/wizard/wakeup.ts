@@ -1,11 +1,13 @@
-import { existsSync, mkdirSync, cpSync, writeFileSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, cpSync } from "fs";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import * as p from "@clack/prompts";
-import initSqlJs from "sql.js";
+import Database from "better-sqlite3";
 import { log } from "@/logger";
 import { METADATA } from "@/meta";
 import { getHomeDir, setHomeDir } from "@/home";
+import { ensureEmbeddingModel } from "@/rag/embedding";
+import { initializeRagStorage } from "@/rag/db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_DIR = resolve(__dirname, "../template/home");
@@ -56,14 +58,10 @@ async function initialize_home(): Promise<boolean> {
 
 async function initialize_database(): Promise<void> {
   const homeDir = getHomeDir();
-  const dbPath = join(homeDir, "database.sqlite3");
+  const dbPath = join(homeDir, "memory.db");
+  const db = new Database(dbPath);
 
-  const SQL = await initSqlJs();
-  const db = existsSync(dbPath)
-    ? new SQL.Database(readFileSync(dbPath))
-    : new SQL.Database();
-
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS tools (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -75,7 +73,7 @@ async function initialize_database(): Promise<void> {
     )
   `);
 
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS memory (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -84,7 +82,7 @@ async function initialize_database(): Promise<void> {
     )
   `);
 
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS skills (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -94,9 +92,8 @@ async function initialize_database(): Promise<void> {
     )
   `);
 
-  const data = db.export();
-  writeFileSync(dbPath, Buffer.from(data));
   db.close();
+  await initializeRagStorage();
   log.debug({ dbPath }, "Database initialized");
 }
 
@@ -107,6 +104,12 @@ export async function wakeup(): Promise<void> {
   if (!ok) process.exit(1);
 
   await initialize_database();
+
+  const modelSpinner = p.spinner();
+  modelSpinner.start("Downloading embedding model...");
+  await ensureEmbeddingModel();
+  modelSpinner.stop("Embedding model ready");
+
   p.outro(`Initialized`);
   process.stdout.write(`\nHi, I'm ${METADATA.NAME}.\n\n`);
 }

@@ -4,7 +4,7 @@
 
 - [`.env`](#env)
 - [`.config.toml`](#configtoml)
-- [`.database.sqlite3`](#databasesqlite3)
+- [`.memory.db`](#memorydb)
 - [`.vault/`](#vault)
 - [`.toolbox/`](#toolbox)
 
@@ -26,11 +26,11 @@ This is the global configuration for Roy. It contains the following sections:
 
 ---
 
-### `database.sqlite3`
+### `memory.db`
 
 This is the database for Roy. It contains the following tables/views:
 
-- `memory`: memory archives
+- `memory_records`: long-term memory archives
 - `skills`: skill archives
 - `tools`: tool definitions
 
