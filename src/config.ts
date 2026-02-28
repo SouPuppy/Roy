@@ -3,20 +3,74 @@ import { join } from "path";
 import { parse } from "@iarna/toml";
 import { getHomeDir } from "@/home";
 
-let _config: { log_level?: string } | null = null;
+export type ProviderConfig = {
+  name: string;
+  provider: string;
+  api_key: string;
+  input?: string;
+  max_tokens?: number;
+};
 
-function loadConfig(): { log_level?: string } {
+type AppConfig = {
+  log_level?: string;
+  agent?: {
+    root?: {
+      provider?: string;
+    };
+  };
+  provider?: {
+    default?: {
+      name?: string;
+      provider?: string;
+      mode_provider?: string;
+      api_key?: string;
+      input?: string;
+      max_tokens?: number;
+    };
+  };
+  providers?: ProviderConfig[];
+};
+
+let _config: AppConfig | null = null;
+
+function loadConfig(): AppConfig {
   if (_config) return _config;
   const configPath = join(getHomeDir(), "config.toml");
   if (!existsSync(configPath)) {
     _config = {};
     return _config;
   }
-  _config = parse(readFileSync(configPath, "utf-8")) as { log_level?: string };
+  _config = parse(readFileSync(configPath, "utf-8")) as AppConfig;
   return _config;
 }
 
 export function getLogLevel(): string {
   const cfg = loadConfig();
   return (cfg.log_level ?? process.env.LOG_LEVEL ?? "debug").toLowerCase();
+}
+
+export function getActiveProvider(): ProviderConfig | null {
+  const cfg = loadConfig();
+  const defaultProvider = cfg.provider?.default;
+  if (defaultProvider) {
+    return {
+      name: defaultProvider.name ?? "default",
+      provider: defaultProvider.provider ?? defaultProvider.mode_provider ?? defaultProvider.name ?? "unknown",
+      api_key: defaultProvider.api_key ?? "",
+      input: defaultProvider.input,
+      max_tokens: defaultProvider.max_tokens,
+    };
+  }
+
+  const providers = cfg.providers ?? [];
+  if (providers.length === 0) return null;
+
+  const rootProviderName = cfg.agent?.root?.provider;
+  if (!rootProviderName) return providers[0] ?? null;
+
+  return providers.find((p) => p.name === rootProviderName) ?? null;
+}
+
+export function getDefaultProvider(): ProviderConfig | null {
+  return getActiveProvider();
 }

@@ -9,11 +9,11 @@ max_masters = 1
 max_slaves = 1
 
 [agent.root]
-provider = "default"
+provider = "deepseek"
 
-[[providers]]
-name = "default"
-provider = ""
-api_key = ""
+[provider.default]
+name = "deepseek"
+mode_provider = "deepseek"
+api_key = "sk-"
 input = "text"
 max_tokens = 4096
