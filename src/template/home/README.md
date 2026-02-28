@@ -22,7 +22,7 @@ This is the environment variables file for Roy. It contains the following variab
 
 This is the global configuration for Roy. It contains the following sections:
 
-- `self`: self-related configuration
+- `identity`: identity/profile-related memory
 
 ---
 

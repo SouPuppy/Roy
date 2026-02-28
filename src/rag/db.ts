@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { join } from "path";
 import { getHomeDir } from "@/home";
-import type { MemoryRecord, MemoryScope } from "@/rag/types";
+import type { MemoryKind, MemoryListOptions, MemoryRecord, MemoryScope, MemorySummary } from "@/rag/types";
 import { cosine } from "@/rag/retrieval";
 import { deleteEmbedding, initializeAnn, searchNearest, type AnnStatus, upsertEmbedding } from "@/rag/ann";
 
@@ -32,6 +32,13 @@ export type RagStorageStatus = {
   ann: AnnStatus;
   corpusSize: number;
 };
+
+export type KindNeighbor = {
+  kind: MemoryKind;
+  score: number;
+};
+
+const MEMORY_KINDS: MemoryKind[] = ["identity", "task", "knowledge", "reference", "note", "unclassified"];
 
 let dbSingleton: Database.Database | null = null;
 let annStatus: AnnStatus = { enabled: false, message: "uninitialized" };
@@ -273,6 +280,90 @@ export async function loadMemoriesByIds(ids: string[]): Promise<MemoryRecord[]> 
   return ids.map((id) => mapped.get(id)).filter((x): x is MemoryRecord => Boolean(x));
 }
 
+export async function listMemories(options?: MemoryListOptions): Promise<MemorySummary[]> {
+  const db = getDb();
+  const where: string[] = [];
+  const params: unknown[] = [];
+
+  if (options?.scope) {
+    where.push("scope = ?");
+    params.push(options.scope);
+  }
+  if (options?.kind) {
+    where.push("kind = ?");
+    params.push(options.kind);
+  }
+  if (options?.query?.trim()) {
+    where.push("content LIKE ?");
+    params.push(`%${options.query.trim()}%`);
+  }
+
+  const limit = Math.max(1, Math.min(200, options?.limit ?? 30));
+  const offset = Math.max(0, options?.offset ?? 0);
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const rows = db.prepare(`
+    SELECT id, parent_id, chunk_index, content, embedding_json, kind, scope, importance, token_count, recall_count, last_recalled_at, validity_score, is_negative, created_at, updated_at
+    FROM memory_records
+    ${whereClause}
+    ORDER BY updated_at DESC
+    LIMIT ?
+    OFFSET ?
+  `).all(...params, limit, offset) as StoredRow[];
+
+  return rows.map((row) => {
+    const parsed = parseRow(row);
+    const { embedding: _embedding, ...summary } = parsed;
+    return summary;
+  });
+}
+
+export async function countMemoriesByKind(options?: Pick<MemoryListOptions, "scope" | "query">): Promise<Record<MemoryKind, number>> {
+  const db = getDb();
+  const where: string[] = [];
+  const params: unknown[] = [];
+
+  if (options?.scope) {
+    where.push("scope = ?");
+    params.push(options.scope);
+  }
+  if (options?.query?.trim()) {
+    where.push("content LIKE ?");
+    params.push(`%${options.query.trim()}%`);
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const rows = db.prepare(`
+    SELECT kind, COUNT(*) AS count
+    FROM memory_records
+    ${whereClause}
+    GROUP BY kind
+  `).all(...params) as Array<{ kind: string; count: number }>;
+
+  const counts = MEMORY_KINDS.reduce((acc, kind) => {
+    acc[kind] = 0;
+    return acc;
+  }, {} as Record<MemoryKind, number>);
+
+  for (const row of rows) {
+    if (MEMORY_KINDS.includes(row.kind as MemoryKind)) {
+      counts[row.kind as MemoryKind] = Number(row.count) || 0;
+    }
+  }
+  return counts;
+}
+
+export async function getMemoryById(id: string): Promise<MemoryRecord | null> {
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT id, parent_id, chunk_index, content, embedding_json, kind, scope, importance, token_count, recall_count, last_recalled_at, validity_score, is_negative, created_at, updated_at
+    FROM memory_records
+    WHERE id = ?
+    LIMIT 1
+  `).get(id) as StoredRow | undefined;
+  if (!row) return null;
+  return parseRow(row);
+}
+
 export async function loadSiblingChunks(parentId: string, chunkIndex: number, window = 1): Promise<MemoryRecord[]> {
   const db = getDb();
   const min = Math.max(0, chunkIndex - window);
@@ -296,6 +387,32 @@ export async function searchVectorIds(
   try {
     const hits = searchNearest(db, queryEmbedding, limit, scope);
     return hits.map((hit) => hit.id);
+  } catch {
+    return [];
+  }
+}
+
+export async function searchKindNeighbors(
+  queryEmbedding: number[],
+  limit = 20,
+  scope?: MemoryScope,
+): Promise<KindNeighbor[]> {
+  const db = getDb();
+  if (!annStatus.enabled) return [];
+  try {
+    const hits = searchNearest(db, queryEmbedding, limit, scope);
+    if (hits.length === 0) return [];
+    const candidates = await loadMemoriesByIds(hits.map((h) => h.id));
+    const byId = new Map(candidates.map((c) => [c.id, c.kind]));
+    const out: KindNeighbor[] = [];
+    for (const hit of hits) {
+      const kind = byId.get(hit.id);
+      if (!kind) continue;
+      const distance = Number(hit.distance);
+      const score = Number.isFinite(distance) ? 1 / (1 + Math.max(0, distance)) : 0;
+      out.push({ kind, score });
+    }
+    return out;
   } catch {
     return [];
   }
@@ -342,13 +459,14 @@ export async function findSemanticDuplicate(
 
 export async function mergeIntoExistingMemory(
   existingId: string,
-  incoming: Pick<MemoryRecord, "content" | "importance" | "updatedAt" | "embedding" | "tokenCount">,
+  incoming: Pick<MemoryRecord, "content" | "importance" | "updatedAt" | "embedding" | "tokenCount" | "kind">,
 ): Promise<void> {
   const db = getDb();
   db.prepare(`
     UPDATE memory_records
     SET
       content = ?,
+      kind = ?,
       embedding_json = ?,
       importance = MIN(1.0, (importance * 0.9) + (? * 0.1)),
       token_count = ?,
@@ -357,6 +475,7 @@ export async function mergeIntoExistingMemory(
     WHERE id = ?
   `).run(
     incoming.content,
+    incoming.kind,
     incoming.embedding ? JSON.stringify(incoming.embedding) : null,
     incoming.importance,
     incoming.tokenCount,

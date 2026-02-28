@@ -1,4 +1,4 @@
-export type MemoryKind = "knowledge" | "conversation" | "document" | "note";
+export type MemoryKind = "identity" | "task" | "knowledge" | "reference" | "note" | "unclassified";
 export type MemoryScope = "session" | "project" | "global";
 
 export type MemoryRecord = {
@@ -17,6 +17,16 @@ export type MemoryRecord = {
   createdAt: number;
   updatedAt: number;
   embedding: number[] | null;
+};
+
+export type MemorySummary = Omit<MemoryRecord, "embedding">;
+
+export type MemoryListOptions = {
+  query?: string;
+  scope?: MemoryScope;
+  kind?: MemoryKind;
+  limit?: number;
+  offset?: number;
 };
 
 export type RecallOptions = {

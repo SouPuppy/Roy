@@ -1,12 +1,17 @@
 import { randomUUID } from "crypto";
 import { chunkText, estimateTokenCount } from "@/rag/chunk";
 import { embedText, embedTexts } from "@/rag/embedding";
+import { inferKindByEmbedding } from "@/rag/classifier";
 import {
   bumpRecallMetrics,
+  countMemoriesByKind,
   countMemories,
+  deleteMemory,
   findSemanticDuplicate,
+  getMemoryById,
   getRagStorageStatus,
   insertMemoryRows,
+  listMemories as listMemoriesFromDb,
   loadMemoriesByIds,
   loadSiblingChunks,
   mergeIntoExistingMemory,
@@ -15,9 +20,46 @@ import {
 } from "@/rag/db";
 import { expandQuery } from "@/rag/query";
 import { rerankWithMMR, scoreCandidates } from "@/rag/retrieval";
-import type { MemoryRecord, RecallOptions, ScoredMemory } from "@/rag/types";
+import type { MemoryListOptions, MemoryRecord, MemorySummary, RecallOptions, ScoredMemory } from "@/rag/types";
 
 export type { MemoryRecord, RecallOptions } from "@/rag/types";
+
+const MEMORY_KIND_VALUES = new Set<MemoryRecord["kind"]>([
+  "identity",
+  "task",
+  "knowledge",
+  "reference",
+  "note",
+  "unclassified",
+]);
+
+async function resolveKindByEmbedding(
+  content: string,
+  requestedKind: string | undefined,
+  scope: MemoryRecord["scope"],
+  firstEmbedding: number[] | null,
+): Promise<MemoryRecord["kind"]> {
+  const kind = (requestedKind ?? "auto").toLowerCase().trim();
+  if (!kind || kind === "auto") {
+    const lower = content.toLowerCase();
+    if (lower.startsWith("identity:")) return "identity";
+    if (lower.startsWith("task:")) return "task";
+    if (lower.startsWith("knowledge:")) return "knowledge";
+    if (lower.startsWith("reference:")) return "reference";
+    if (lower.startsWith("note:")) return "note";
+    if (lower.startsWith("unclassified:")) return "unclassified";
+
+    if (!firstEmbedding || firstEmbedding.length === 0) {
+      return "unclassified";
+    }
+    const inferred = await inferKindByEmbedding(firstEmbedding, scope);
+    return inferred.kind;
+  }
+  if (MEMORY_KIND_VALUES.has(kind as MemoryRecord["kind"])) {
+    return kind as MemoryRecord["kind"];
+  }
+  throw new Error(`unsupported_memory_kind:${requestedKind}`);
+}
 
 function dynamicRecallLimit(total: number, preferred?: number): number {
   if (preferred && preferred > 0) return preferred;
@@ -49,7 +91,7 @@ async function expandSiblings(scored: ScoredMemory[], window = 1): Promise<Score
 export async function remember(
   content: string,
   options?: {
-    kind?: string;
+    kind?: string; // identity|task|knowledge|reference|note|auto
     scope?: string;
     importance?: number;
     validityScore?: number;
@@ -68,6 +110,12 @@ export async function remember(
     throw new Error("empty_memory_chunks");
   }
   const embeddings = await embedTexts(chunks);
+  const resolvedKind = await resolveKindByEmbedding(
+    normalized,
+    options?.kind,
+    scope,
+    embeddings[0] ?? null,
+  );
 
   const rows: MemoryRecord[] = [];
   let firstExisting: MemoryRecord | null = null;
@@ -79,12 +127,20 @@ export async function remember(
     if (duplicate) {
       await mergeIntoExistingMemory(duplicate.id, {
         content: chunk,
+        kind: resolvedKind,
         importance: options?.importance ?? 0.5,
         updatedAt: now,
         embedding,
         tokenCount,
       });
-      firstExisting = firstExisting ?? duplicate;
+      firstExisting = firstExisting ?? {
+        ...duplicate,
+        content: chunk,
+        kind: resolvedKind,
+        embedding,
+        tokenCount,
+        updatedAt: now,
+      };
       continue;
     }
     rows.push({
@@ -93,7 +149,7 @@ export async function remember(
       chunkIndex: index,
       content: chunk,
       embedding,
-      kind: (options?.kind ?? "knowledge") as MemoryRecord["kind"],
+      kind: resolvedKind,
       scope,
       importance: options?.importance ?? 0.5,
       tokenCount,
@@ -202,8 +258,32 @@ export async function buildContext(query: string, limit = 5, maxChars = 2400): P
 }
 
 export async function rememberConversation(question: string, answer: string): Promise<void> {
-  await remember(`User: ${question}`, { kind: "conversation", scope: "session", importance: 0.6 });
-  await remember(`Assistant: ${answer}`, { kind: "conversation", scope: "session", importance: 0.6 });
+  await remember(`User: ${question}`, { kind: "identity", scope: "session", importance: 0.6 });
+  await remember(`Assistant: ${answer}`, { kind: "identity", scope: "session", importance: 0.6 });
+}
+
+export async function forget(id: string): Promise<void> {
+  const trimmed = id.trim();
+  if (!trimmed) {
+    throw new Error("empty_memory_id");
+  }
+  await deleteMemory(trimmed);
+}
+
+export async function listMemories(options?: MemoryListOptions): Promise<MemorySummary[]> {
+  return listMemoriesFromDb(options);
+}
+
+export async function getMemoryKindCounts(options?: Pick<MemoryListOptions, "scope" | "query">): Promise<Record<MemoryRecord["kind"], number>> {
+  return countMemoriesByKind(options);
+}
+
+export async function openMemory(id: string): Promise<MemoryRecord | null> {
+  const trimmed = id.trim();
+  if (!trimmed) {
+    throw new Error("empty_memory_id");
+  }
+  return getMemoryById(trimmed);
 }
 
 export async function getRagStatus(): Promise<{
