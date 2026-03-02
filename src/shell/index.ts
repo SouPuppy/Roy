@@ -7,6 +7,9 @@ import { getEmbeddingStatus } from "@/rag/embedding";
 import { ask } from "@/provider/ask";
 import { forget, getMemoryKindCounts, getRagStatus, listMemories, recallScored, remember } from "@/rag";
 import { runMemoryExplorer } from "@/shell/memory-explorer";
+import { startGuiServer } from "@/gui/index";
+import { runTui } from "@/shell/tui";
+import { startDiscordBot } from "@/discord/index";
 import type { MemoryKind, MemoryScope } from "@/rag/types";
 
 const program = new Command();
@@ -232,6 +235,37 @@ program
   .description("Show help information")
   .action(() => {
     program.outputHelp();
+  });
+
+program
+  .command("gui")
+  .description("Start local web GUI for memory/RAG")
+  .option("-p, --port <port>", "Port number", "50777")
+  .option("--open", "Open browser automatically")
+  .action((opts: { port?: string; open?: boolean }) => {
+    const port = Number(opts.port) || 50777;
+    startGuiServer({ port, open: Boolean(opts.open) });
+  });
+
+program
+  .command("tui")
+  .description("Start basic multi-screen TUI")
+  .action(async () => {
+    await runTui();
+  });
+
+program
+  .command("discord")
+  .description("Start Discord bot gateway adapter")
+  .option("--prefix <prefix>", "Command prefix", "!")
+  .action(async (opts: { prefix?: string }) => {
+    try {
+      await startDiscordBot({ prefix: opts.prefix });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "discord_start_failed";
+      console.error(`discord failed: ${message}`);
+      process.exitCode = 1;
+    }
   });
 
 program.parse();

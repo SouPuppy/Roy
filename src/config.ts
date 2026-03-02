@@ -44,6 +44,14 @@ function loadConfig(): AppConfig {
   return _config;
 }
 
+function normalizeApiKey(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  // Historical template value; treat as not configured.
+  if (v === "sk-") return "";
+  return v;
+}
+
 export function getLogLevel(): string {
   const cfg = loadConfig();
   return (cfg.log_level ?? process.env.LOG_LEVEL ?? "debug").toLowerCase();
@@ -53,10 +61,15 @@ export function getActiveProvider(): ProviderConfig | null {
   const cfg = loadConfig();
   const defaultProvider = cfg.provider?.default;
   if (defaultProvider) {
+    const providerName = (defaultProvider.provider ?? defaultProvider.mode_provider ?? defaultProvider.name ?? "unknown").toLowerCase();
+    const envApiKey = providerName === "deepseek"
+      ? (process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY)
+      : process.env.OPENAI_API_KEY;
+    const apiKey = normalizeApiKey(defaultProvider.api_key) || normalizeApiKey(envApiKey);
     return {
       name: defaultProvider.name ?? "default",
       provider: defaultProvider.provider ?? defaultProvider.mode_provider ?? defaultProvider.name ?? "unknown",
-      api_key: defaultProvider.api_key ?? "",
+      api_key: apiKey,
       input: defaultProvider.input,
       max_tokens: defaultProvider.max_tokens,
     };

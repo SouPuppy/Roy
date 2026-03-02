@@ -18,12 +18,76 @@ pnpm roy version
 pnpm roy status
 pnpm roy wakeup
 pnpm roy start
+pnpm roy gui --open
 ```
 
 `status` returns:
 - LLM provider connection status
 - Embedding model status (`not_loaded` / `cached` / `loading` / `ready`)
 - RAG storage status (db path, ANN index availability, corpus size)
+
+## Web GUI
+
+Start GUI:
+
+```bash
+pnpm roy gui
+```
+
+Custom port and auto-open browser:
+
+```bash
+pnpm roy gui --port 50777 --open
+```
+
+GUI includes:
+- Memory list/filter/delete
+- Remember (write memory)
+- Recall (scored retrieval)
+- Ask (with RAG context)
+- Runtime status panel
+
+## TUI
+
+Start TUI:
+
+```bash
+pnpm roy tui
+```
+
+Main screens:
+- Chat
+- Memory
+- Recall
+- Status
+
+Interaction rules:
+- Number + Enter only
+- `0` to go back / exit
+- Long text is paged by 10 lines
+
+## Discord Bot Adapter
+
+Set token in [.home/.env](.home/.env):
+
+```bash
+DISCORD_BOT_TOKEN=your_token_here
+# Optional when network cannot reach discord.com directly
+# DISCORD_PROXY_URL=http://127.0.0.1:7890
+```
+
+Start adapter:
+
+```bash
+pnpm roy discord
+```
+
+Supported commands in Discord:
+- `!help`
+- `!ask <question>`
+- `!remember <content>`
+- `!recall <query>`
+- `!forget <id> --force`
 
 ## Memory Operations
 

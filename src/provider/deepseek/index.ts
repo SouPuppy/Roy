@@ -30,7 +30,7 @@ export async function getDeepSeekStatus(cfg: ProviderConfig): Promise<LlmStatus>
         provider: cfg.name,
         ok: false,
         latency_ms: latency,
-        message: `http_${res.status}`,
+        message: res.status === 401 ? "invalid_api_key" : `http_${res.status}`,
       };
     }
 
@@ -82,6 +82,9 @@ export async function askDeepSeek(
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("deepseek_invalid_api_key");
+    }
     throw new Error(`deepseek_http_${res.status}`);
   }
 
