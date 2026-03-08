@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import * as p from "@clack/prompts";
 import Database from "better-sqlite3";
 import { log } from "@/logger";
-import { METADATA } from "@/meta";
+import { hardcodeExists, readHardcode, writeHardcode } from "@/meta/hardcode";
 import { getHomeDir, setHomeDir } from "@/home";
 import { ensureEmbeddingModel } from "@/rag/embedding";
 import { initializeRagStorage } from "@/rag/db";
@@ -115,6 +115,49 @@ export async function wakeup(): Promise<void> {
   await ensureEmbeddingModel();
   modelSpinner.stop("Embedding model ready");
 
+  let name: string;
+  let serialSuffix: string;
+  if (!hardcodeExists()) {
+    const nameRes = await p.text({
+      message: "Name",
+      initialValue: "Roy",
+      placeholder: "Roy",
+      validate: (v) => {
+        if (!v?.trim()) return "Name is required";
+        return undefined;
+      },
+    });
+    if (p.isCancel(nameRes)) {
+      p.cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    name = nameRes.trim();
+
+    const randomSuffix = String(Math.floor(10000 + Math.random() * 90000));
+    const suffixRes = await p.text({
+      message: "Serial suffix (5 digits, Enter to use random)",
+      initialValue: randomSuffix,
+      placeholder: randomSuffix,
+      validate: (v) => {
+        const s = (v ?? "").trim();
+        if (!s) return undefined;
+        if (!/^\d{5}$/.test(s)) return "Must be exactly 5 digits";
+        return undefined;
+      },
+    });
+    if (p.isCancel(suffixRes)) {
+      p.cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    serialSuffix = (suffixRes.trim() || randomSuffix).padStart(5, "0").slice(-5);
+
+    writeHardcode({ NAME: name, SERIAL_SUFFIX: serialSuffix });
+  } else {
+    const hc = readHardcode();
+    name = hc.NAME;
+    serialSuffix = hc.SERIAL_SUFFIX;
+  }
+
   p.outro(`Initialized`);
-  process.stdout.write(`\nHi, I'm ${METADATA.NAME}.\n\n`);
+  process.stdout.write(`\nHi, I'm ${name}.\n\n`);
 }

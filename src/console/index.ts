@@ -213,18 +213,18 @@ program
   });
 
 program
-  .command("version")
-  .description("Show version information")
+  .command("info")
+  .description("Show metadata (name, model, serial, etc.)")
   .action(() => {
     console.log(`
 ============================
 NAME        : ${METADATA.NAME}
 BIRTHDATE   : ${METADATA.BIRTHDATE}
+SERIAL      : ${METADATA.SERIAL}
 ----------------------------
 MODEL       : ${METADATA.MODEL}
 GENERATION  : ${METADATA.GENERATION}
 GENDER      : ${METADATA.GENDER}
-SERIAL      : ${METADATA.SERIAL}
 ============================
 `.trim());
   });

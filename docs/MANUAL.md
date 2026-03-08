@@ -14,7 +14,7 @@ pnpm roy status
 
 ```bash
 pnpm roy help
-pnpm roy version
+pnpm roy info
 pnpm roy status
 pnpm roy wakeup
 pnpm roy start

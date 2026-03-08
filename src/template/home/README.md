@@ -4,6 +4,7 @@
 
 - [`.env`](#env)
 - [`.config.toml`](#configtoml)
+- [`HARDCODE`](#hardcode)
 - [`memory/`](#memory)
 - [`.vault/`](#vault)
 - [`.toolbox/`](#toolbox)
@@ -25,6 +26,15 @@ This is the global configuration for Roy. It contains the following sections:
 - `identity`: identity/profile-related memory
 
 ---
+
+### `HARDCODE`
+
+Metadata overrides (prompted at first wakeup). TOML format, no file extension:
+
+```toml
+__NAME__ = "Roy"
+__SERIAL_SUFFIX__ = "00000"
+```
 
 ### `memory/`
 
