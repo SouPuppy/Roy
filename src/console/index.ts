@@ -5,6 +5,8 @@ import { wakeup } from "@/wizard/wakeup";
 import { getLlmStatus } from "@/provider";
 import { getEmbeddingStatus } from "@/rag/embedding";
 import { ask } from "@/provider/ask";
+import { think } from "@/agent/think";
+import { runChatRepl } from "@/console/chat-repl";
 import { forget, getMemoryKindCounts, getRagStatus, listMemories, recallScored, remember } from "@/rag";
 import { runMemoryExplorer } from "@/console/memory-explorer";
 import { startGuiServer } from "@/gui/server";
@@ -47,6 +49,35 @@ program
         2,
       ),
     );
+  });
+
+program
+  .command("chat")
+  .description("Interactive REPL chat (In[i]/Out[i]), session saved to .agent/session/")
+  .option("--debug", "Show debug logs (may interleave with prompt)")
+  .action(async (opts: { debug?: boolean }) => {
+    try {
+      await runChatRepl({ debug: opts.debug });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "chat_failed";
+      console.error(`chat failed: ${message}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("think")
+  .description("Call default LLM with a question, get plain answer (no RAG, no skills)")
+  .argument("<question>", "Question text")
+  .action(async (question: string) => {
+    try {
+      const answer = await think(question);
+      console.log(answer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "think_failed";
+      console.error(`think failed: ${message}`);
+      process.exitCode = 1;
+    }
   });
 
 program

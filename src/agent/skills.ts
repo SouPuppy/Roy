@@ -1,6 +1,8 @@
 import type { ToolDef, ToolResult } from "./toolbox";
 import { exec as execBultin } from "@/bultins/exec";
 import { runMemory } from "@/bultins/memory";
+import { think as thinkBultin } from "@/agent/think";
+import { log } from "@/logger";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -14,9 +16,9 @@ export function registerTool(def: ToolDef): void {
   register.set(def.name, def);
 }
 
-// Register bultin.exec
+// Register bultin_exec (API requires a-z, 0-9, underscore—no dots)
 registerTool({
-  name: "bultin.exec",
+  name: "bultin_exec",
   prompt: readFileSync(join(__dirname, "../bultins/exec/SKILL.md"), "utf-8"),
   run: (args) => {
     const cmd = typeof args?.cmd === "string" ? args.cmd : "";
@@ -29,9 +31,18 @@ registerTool({
   },
 });
 
-// Register bultin.memory
 registerTool({
-  name: "bultin.memory",
+  name: "bultin_think",
+  prompt: "Call LLM for reasoning. Use when you need to reason through a problem before acting.",
+  run: async (args) => {
+    const q = typeof args?.question === "string" ? args.question : "";
+    const out = await thinkBultin(q);
+    return { result_code: 0, stdout: out };
+  },
+});
+
+registerTool({
+  name: "bultin_memory",
   prompt: readFileSync(join(__dirname, "../bultins/memory/SKILL.md"), "utf-8"),
   run: async (args) => {
     const action = typeof args?.action === "string" ? args.action : "";
@@ -75,11 +86,13 @@ export function getSkillsPrompt(): string {
 }
 
 /** Look up tool by name in register, run, return result. */
-async function runTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
+export async function runTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
   const def = register.get(name);
   if (!def) {
+    log.debug({ step: "[skills] runTool unknown", name });
     return { result_code: -1, stderr: `unknown_tool:${name}` };
   }
+  log.debug({ step: "[skills] runTool", name, args });
   return def.run(args);
 }
 
@@ -93,11 +106,14 @@ export async function parseAndRun(response: string): Promise<{ text: string; res
   try {
     parsed = JSON.parse(raw);
   } catch {
+    log.debug("[skills] parseAndRun: not JSON, pass-through");
     return { text: raw };
   }
   if (!isValidToolCall(parsed)) {
+    log.debug("[skills] parseAndRun: invalid tool call, pass-through");
     return { text: raw };
   }
+  log.debug({ step: "[skills] parseAndRun tool call", tool: parsed.tool });
   const result = await runTool(parsed.tool, parsed.arguments);
   const text = JSON.stringify({
     result_code: result.result_code,

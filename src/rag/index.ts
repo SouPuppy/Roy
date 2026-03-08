@@ -22,6 +22,7 @@ import {
 } from "@/rag/db";
 import { searchCache } from "@/rag/session-cache";
 import { expandQuery } from "@/rag/query";
+import { log } from "@/logger";
 import { rerankWithMMR, scoreCandidates } from "@/rag/retrieval";
 import type { MemoryListOptions, MemoryRecord, MemorySummary, RecallOptions, ScoredMemory } from "@/rag/types";
 
@@ -216,10 +217,12 @@ export async function recall(query: string, options?: RecallOptions): Promise<Me
 }
 
 export async function buildContext(query: string, limit = 5, maxChars = 2400): Promise<string> {
+  log.debug("[buildContext] recallScored + searchCache");
   const [memories, cacheContext] = await Promise.all([
     recallScored(query, { limit, recallLimit: Math.max(30, limit * 6) }),
     Promise.resolve(searchCache({ days: 3, maxChars: Math.floor(maxChars * 0.4) })),
   ]);
+  log.debug({ step: "[buildContext] memories", count: memories.length, cacheLen: cacheContext?.length ?? 0 });
 
   const parts: string[] = [];
 

@@ -9,11 +9,13 @@ const DEFAULT_NAME = "Roy";
 export type HardcodeData = {
   NAME: string;
   SERIAL_SUFFIX: string;
+  USER?: string;
 };
 
 type HardcodeToml = {
   __NAME__?: string;
   __SERIAL_SUFFIX__?: string;
+  __USER__?: string;
 };
 
 function getHardcodePath(): string {
@@ -31,9 +33,11 @@ export function readHardcode(): HardcodeData {
     const name = parsed.__NAME__?.trim();
     const suffix = parsed.__SERIAL_SUFFIX__?.trim();
     const validSuffix = /^\d{5}$/.test(suffix ?? "") ? suffix! : "00000";
+    const user = parsed.__USER__?.trim();
     return {
       NAME: name || DEFAULT_NAME,
       SERIAL_SUFFIX: validSuffix,
+      USER: user || undefined,
     };
   } catch {
     return { NAME: DEFAULT_NAME, SERIAL_SUFFIX: "00000" };
@@ -42,8 +46,10 @@ export function readHardcode(): HardcodeData {
 
 export function writeHardcode(data: HardcodeData): void {
   const path = getHardcodePath();
-  const obj = { __NAME__: data.NAME, __SERIAL_SUFFIX__: data.SERIAL_SUFFIX };
-  const content = stringify(obj);
+  const obj: Record<string, string> = { __NAME__: data.NAME, __SERIAL_SUFFIX__: data.SERIAL_SUFFIX };
+  if (data.USER) obj.__USER__ = data.USER;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content = stringify(obj as any);
   writeFileSync(path, content, "utf-8");
 }
 

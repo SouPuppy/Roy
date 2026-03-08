@@ -9,9 +9,13 @@ import { hasWorkspaceDirConfigured, getWorkspaceDir, writeWorkspaceDir } from "@
 import { getHomeDir, setHomeDir } from "@/home";
 import { ensureEmbeddingModel } from "@/rag/embedding";
 import { initializeRagStorage } from "@/rag/db";
+import { remember } from "@/rag";
+import { replaceHardcode } from "@/utils/hardcode-codex";
+import { readFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_DIR = resolve(__dirname, "../template/home");
+const WAKEUP_PATH = resolve(__dirname, "../template/WAKEUP");
 
 async function initialize_home(): Promise<boolean> {
   const defaultHome = getHomeDir();
@@ -118,7 +122,9 @@ export async function wakeup(): Promise<void> {
 
   let name: string;
   let serialSuffix: string;
-  if (!hardcodeExists()) {
+  let user: string;
+  const isFirstWakeup = !hardcodeExists();
+  if (isFirstWakeup) {
     const nameRes = await p.text({
       message: "Name",
       initialValue: "Roy",
@@ -152,11 +158,23 @@ export async function wakeup(): Promise<void> {
     }
     serialSuffix = (suffixRes.trim() || randomSuffix).padStart(5, "0").slice(-5);
 
-    writeHardcode({ NAME: name, SERIAL_SUFFIX: serialSuffix });
+    const userRes = await p.text({
+      message: "Creator name (call me)",
+      initialValue: "User",
+      placeholder: "User",
+    });
+    if (p.isCancel(userRes)) {
+      p.cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    user = (userRes?.trim() || "User");
+
+    writeHardcode({ NAME: name, SERIAL_SUFFIX: serialSuffix, USER: user });
   } else {
     const hc = readHardcode();
     name = hc.NAME;
     serialSuffix = hc.SERIAL_SUFFIX;
+    user = hc.USER ?? "User";
   }
 
   if (!hasWorkspaceDirConfigured()) {
@@ -182,6 +200,15 @@ export async function wakeup(): Promise<void> {
 
   const workspaceDir = getWorkspaceDir();
   mkdirSync(workspaceDir, { recursive: true });
+
+  if (isFirstWakeup) {
+    const wakeupSpinner = p.spinner();
+    wakeupSpinner.start("Injecting WAKEUP into memory...");
+    const rawWakeup = readFileSync(WAKEUP_PATH, "utf-8");
+    const wakeupContent = replaceHardcode(rawWakeup);
+    await remember(wakeupContent, { kind: "identity", scope: "global", importance: 0.9 });
+    wakeupSpinner.stop("WAKEUP injected");
+  }
 
   p.outro(`Initialized`);
   process.stdout.write(`\nHi, I'm ${name}.\n\n`);
