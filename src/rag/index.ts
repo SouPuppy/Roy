@@ -6,6 +6,8 @@ import {
   bumpRecallMetrics,
   countMemoriesByKind,
   countMemories,
+  countMemoriesByKindAndLastDays,
+  countMemoriesByLastDays,
   deleteMemory,
   findSemanticDuplicate,
   getMemoryById,
@@ -277,6 +279,8 @@ export async function listMemories(options?: MemoryListOptions): Promise<MemoryS
 export async function getMemoryKindCounts(options?: Pick<MemoryListOptions, "scope" | "query">): Promise<Record<MemoryRecord["kind"], number>> {
   return countMemoriesByKind(options);
 }
+
+export { countMemoriesByLastDays, countMemoriesByKindAndLastDays } from "@/rag/db";
 
 export async function openMemory(id: string): Promise<MemoryRecord | null> {
   const trimmed = id.trim();

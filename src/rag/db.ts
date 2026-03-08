@@ -352,6 +352,70 @@ export async function countMemoriesByKind(options?: Pick<MemoryListOptions, "sco
   return counts;
 }
 
+export type MemoryCountByDay = { date: string; label: string; count: number };
+
+export async function countMemoriesByLastDays(days = 7): Promise<MemoryCountByDay[]> {
+  const db = getDb();
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const rows = db.prepare(`
+    SELECT date(created_at/1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+    FROM memory_records
+    WHERE created_at >= ?
+    GROUP BY date
+  `).all(since) as Array<{ date: string; count: number }>;
+  const byDate = new Map(rows.map((r) => [r.date, Number(r.count)]));
+
+  const result: MemoryCountByDay[] = [];
+  const labels: Record<number, string> = { 0: "今天", 1: "昨天", 2: "前天" };
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const label = labels[i] ?? dateStr.slice(5);
+    result.push({ date: dateStr, label, count: byDate.get(dateStr) ?? 0 });
+  }
+  return result;
+}
+
+export type MemoryCountByKindAndDay = MemoryCountByDay & Record<MemoryKind, number>;
+
+export async function countMemoriesByKindAndLastDays(days = 7): Promise<MemoryCountByKindAndDay[]> {
+  const db = getDb();
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const rows = db.prepare(`
+    SELECT date(created_at/1000, 'unixepoch', 'localtime') AS date, kind, COUNT(*) AS count
+    FROM memory_records
+    WHERE created_at >= ?
+    GROUP BY date, kind
+  `).all(since) as Array<{ date: string; kind: string; count: number }>;
+
+  const byDateKind = new Map<string, number>();
+  for (const r of rows) {
+    if (MEMORY_KINDS.includes(r.kind as MemoryKind)) {
+      byDateKind.set(`${r.date}:${r.kind}`, Number(r.count));
+    }
+  }
+
+  const result: MemoryCountByKindAndDay[] = [];
+  const labels: Record<number, string> = { 0: "今天", 1: "昨天", 2: "前天" };
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const label = labels[i] ?? dateStr.slice(5);
+    const row: MemoryCountByKindAndDay = { date: dateStr, label, count: 0, identity: 0, task: 0, knowledge: 0, reference: 0, note: 0, unclassified: 0 };
+    let total = 0;
+    for (const k of MEMORY_KINDS) {
+      const n = byDateKind.get(`${dateStr}:${k}`) ?? 0;
+      row[k] = n;
+      total += n;
+    }
+    row.count = total;
+    result.push(row);
+  }
+  return result;
+}
+
 export async function getMemoryById(id: string): Promise<MemoryRecord | null> {
   const db = getDb();
   const row = db.prepare(`

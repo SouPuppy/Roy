@@ -16,7 +16,10 @@
   "scripts": {
     "roy": "tsx src/index.ts",
     "start": "LOG_LEVEL=debug tsx src/index.ts start",
-    "test:rag": "tsx --test src/rag/__tests__/*.test.ts"
+    "test:rag": "tsx --test src/rag/__tests__/*.test.ts",
+    "gui:dev": "vite --config src/gui/web/vite.config.ts",
+    "gui:build": "vite build --config src/gui/web/vite.config.ts",
+    "gui:preview": "vite preview --config src/gui/web/vite.config.ts"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1",
@@ -32,15 +35,25 @@
     "prompts": "^2.4.2",
     "sql.js": "^1.14.0",
     "sqlite-vec": "0.1.7-alpha.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "recharts": "^2.15.0",
     "undici": "^7.16.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.3.2",
     "@types/prompts": "^2.4.9",
     "@types/ws": "^8.5.13",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.1.5"
   }
 }

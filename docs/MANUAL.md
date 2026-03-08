@@ -31,6 +31,7 @@ pnpm roy gui --open
 Start GUI:
 
 ```bash
+pnpm gui:build
 pnpm roy gui
 ```
 

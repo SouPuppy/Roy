@@ -7,7 +7,7 @@ import { getEmbeddingStatus } from "@/rag/embedding";
 import { ask } from "@/provider/ask";
 import { forget, getMemoryKindCounts, getRagStatus, listMemories, recallScored, remember } from "@/rag";
 import { runMemoryExplorer } from "@/shell/memory-explorer";
-import { startGuiServer } from "@/gui/index";
+import { startGuiServer } from "@/gui/server";
 import { runTui } from "@/shell/tui";
 import { startDiscordBot } from "@/discord/index";
 import type { MemoryKind, MemoryScope } from "@/rag/types";
