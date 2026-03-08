@@ -4,7 +4,7 @@ import { resolve, dirname, join } from "path";
 function findWorkDir(): string {
   let dir = process.cwd();
   for (let i = 0; i < 20; i++) {
-    if (existsSync(resolve(dir, ".home"))) return dir;
+    if (existsSync(resolve(dir, ".agent"))) return dir;
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -16,7 +16,7 @@ let _homeDir: string | null = null;
 
 export function getHomeDir(): string {
   if (!_homeDir) {
-    _homeDir = join(findWorkDir(), ".home");
+    _homeDir = join(findWorkDir(), ".agent");
   }
   return _homeDir;
 }

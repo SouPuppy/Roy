@@ -50,7 +50,7 @@ GUI includes:
 
 ## Discord Bot Adapter
 
-Set token in [.home/.env](.home/.env):
+Set token in [.agent/.env](.agent/.env):
 
 ```bash
 DISCORD_BOT_TOKEN=your_token_here
@@ -153,11 +153,11 @@ Available options:
 ## Ask via Default Provider
 
 ```bash
-pnpm roy ask --question "Who am I"
+pnpm roy ask "Who am I"
 ```
 
 This automatically:
-- Uses the default provider from `.home/config.toml`
+- Uses the default provider from `.agent/config.toml`
 - Builds RAG context
 - Writes the Q&A back into conversation memory
 
@@ -167,6 +167,6 @@ This automatically:
 pnpm roy wakeup
 pnpm roy remember "I prefer TypeScript"
 pnpm roy recall "what do I prefer"
-pnpm roy ask --question "What language do I prefer?"
+pnpm roy ask "What language do I prefer?"
 pnpm roy memory
 ```

@@ -60,6 +60,10 @@ export async function askDeepSeek(
     throw new Error("missing_api_key");
   }
 
+  const systemContent = context
+    ? `You are Roy. Use the provided memory context when it is relevant.\n\n${context}`
+    : "You are Roy.";
+
   const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -69,12 +73,7 @@ export async function askDeepSeek(
     body: JSON.stringify({
       model: "deepseek-chat",
       messages: [
-        {
-          role: "system",
-          content: context
-            ? `You are Roy. Use the provided memory context when it is relevant.\n\nMemory Context:\n${context}`
-            : "You are Roy.",
-        },
+        { role: "system", content: systemContent },
         { role: "user", content: question },
       ],
       max_tokens: cfg.max_tokens ?? 1024,

@@ -52,10 +52,10 @@ program
 program
   .command("ask")
   .description("Ask question to LLM provider")
-  .requiredOption("-q, --question <question>", "Question text")
-  .action(async (opts: { question: string }) => {
+  .argument("<question>", "Question text")
+  .action(async (question: string) => {
     try {
-      const answer = await ask(opts.question);
+      const answer = await ask(question);
       console.log(answer);
     } catch (error) {
       const message = error instanceof Error ? error.message : "ask_failed";

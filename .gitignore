@@ -10,4 +10,5 @@ dist
 .vscode
 
 # Home dir
-.home
+.agent
+.workspace

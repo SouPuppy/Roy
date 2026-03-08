@@ -20,6 +20,7 @@ import {
   searchFtsIds,
   searchVectorIds,
 } from "@/rag/db";
+import { searchCache } from "@/rag/session-cache";
 import { expandQuery } from "@/rag/query";
 import { rerankWithMMR, scoreCandidates } from "@/rag/retrieval";
 import type { MemoryListOptions, MemoryRecord, MemorySummary, RecallOptions, ScoredMemory } from "@/rag/types";
@@ -215,8 +216,18 @@ export async function recall(query: string, options?: RecallOptions): Promise<Me
 }
 
 export async function buildContext(query: string, limit = 5, maxChars = 2400): Promise<string> {
-  const memories = await recallScored(query, { limit, recallLimit: Math.max(30, limit * 6) });
-  if (memories.length === 0) return "";
+  const [memories, cacheContext] = await Promise.all([
+    recallScored(query, { limit, recallLimit: Math.max(30, limit * 6) }),
+    Promise.resolve(searchCache({ days: 3, maxChars: Math.floor(maxChars * 0.4) })),
+  ]);
+
+  const parts: string[] = [];
+
+  if (cacheContext) {
+    parts.push(cacheContext);
+  }
+
+  if (memories.length === 0) return parts.join("\n\n");
 
   const grouped = new Map<
     string,
@@ -249,14 +260,13 @@ export async function buildContext(query: string, limit = 5, maxChars = 2400): P
     })
     .sort((a, b) => b.score - a.score);
 
-  const parts: string[] = [];
-  let total = 0;
+  let total = cacheContext ? cacheContext.length : 0;
   for (const block of parentBlocks.map((x) => x.text)) {
     if (total + block.length > maxChars) break;
     parts.push(block);
     total += block.length;
   }
-  return parts.join("\n");
+  return parts.join("\n\n");
 }
 
 export async function rememberConversation(question: string, answer: string): Promise<void> {

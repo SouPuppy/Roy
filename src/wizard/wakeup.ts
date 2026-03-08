@@ -5,6 +5,7 @@ import * as p from "@clack/prompts";
 import Database from "better-sqlite3";
 import { log } from "@/logger";
 import { hardcodeExists, readHardcode, writeHardcode } from "@/meta/hardcode";
+import { hasWorkspaceDirConfigured, getWorkspaceDir, writeWorkspaceDir } from "@/config";
 import { getHomeDir, setHomeDir } from "@/home";
 import { ensureEmbeddingModel } from "@/rag/embedding";
 import { initializeRagStorage } from "@/rag/db";
@@ -157,6 +158,30 @@ export async function wakeup(): Promise<void> {
     name = hc.NAME;
     serialSuffix = hc.SERIAL_SUFFIX;
   }
+
+  if (!hasWorkspaceDirConfigured()) {
+    const workspaceRes = await p.text({
+      message: "Workspace dir (for exec, file ops)",
+      initialValue: ".workspace",
+      placeholder: ".workspace",
+      validate: (v) => {
+        if (!v?.trim()) return "Workspace dir is required";
+        return undefined;
+      },
+    });
+    if (p.isCancel(workspaceRes)) {
+      p.cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    const raw = workspaceRes.trim();
+    const workDir = dirname(getHomeDir());
+    const resolved = raw === ".workspace" ? join(workDir, ".workspace") : raw;
+    mkdirSync(resolved, { recursive: true });
+    writeWorkspaceDir(resolved);
+  }
+
+  const workspaceDir = getWorkspaceDir();
+  mkdirSync(workspaceDir, { recursive: true });
 
   p.outro(`Initialized`);
   process.stdout.write(`\nHi, I'm ${name}.\n\n`);

@@ -195,7 +195,7 @@ export async function startDiscordBot(options?: StartDiscordOptions): Promise<vo
   } catch (error) {
     const message = error instanceof Error ? error.message : "discord_login_failed";
     if (/timeout/i.test(message)) {
-      throw new Error(`${message} (network blocked? set DISCORD_PROXY_URL or HTTPS_PROXY in .home/.env)`);
+      throw new Error(`${message} (network blocked? set DISCORD_PROXY_URL or HTTPS_PROXY in .agent/.env)`);
     }
     if (/disallowed intents/i.test(message)) {
       throw new Error("Used disallowed intents (enable MESSAGE CONTENT INTENT in Discord Developer Portal > Bot)");

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { parse } from "@iarna/toml";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { parse, stringify } from "@iarna/toml";
 import { getHomeDir } from "@/home";
 
 export type ProviderConfig = {
@@ -13,6 +13,9 @@ export type ProviderConfig = {
 
 type AppConfig = {
   log_level?: string;
+  workspace?: {
+    dir?: string;
+  };
   agent?: {
     root?: {
       provider?: string;
@@ -86,4 +89,39 @@ export function getActiveProvider(): ProviderConfig | null {
 
 export function getDefaultProvider(): ProviderConfig | null {
   return getActiveProvider();
+}
+
+export function hasWorkspaceDirConfigured(): boolean {
+  const cfg = loadConfig();
+  return (cfg.workspace?.dir?.trim()?.length ?? 0) > 0;
+}
+
+function findWorkDir(): string {
+  let d = process.cwd();
+  for (let i = 0; i < 20; i++) {
+    if (existsSync(resolve(d, ".agent"))) return d;
+    const parent = dirname(d);
+    if (parent === d) break;
+    d = parent;
+  }
+  return process.cwd();
+}
+
+export function getWorkspaceDir(): string {
+  const cfg = loadConfig();
+  const dir = cfg.workspace?.dir?.trim();
+  if (dir) return dir;
+  return join(findWorkDir(), ".workspace");
+}
+
+export function writeWorkspaceDir(dir: string): void {
+  const configPath = join(getHomeDir(), "config.toml");
+  const cfg = existsSync(configPath)
+    ? (parse(readFileSync(configPath, "utf-8")) as AppConfig)
+    : ({} as AppConfig);
+  if (!cfg.workspace) cfg.workspace = {};
+  cfg.workspace.dir = dir.trim();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  writeFileSync(configPath, stringify(cfg as any), "utf-8");
+  _config = null;
 }
