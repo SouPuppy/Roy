@@ -110,8 +110,11 @@ function findWorkDir(): string {
 export function getWorkspaceDir(): string {
   const cfg = loadConfig();
   const dir = cfg.workspace?.dir?.trim();
-  if (dir) return dir;
-  return join(findWorkDir(), ".workspace");
+  const workDir = findWorkDir();
+  const defaultDir = join(workDir, ".workspace");
+  if (!dir) return defaultDir;
+  // Always return absolute path
+  return dir.startsWith("/") ? dir : resolve(workDir, dir);
 }
 
 export function writeWorkspaceDir(dir: string): void {

@@ -1,38 +1,29 @@
+import { randomUUID } from "crypto";
 import { appendFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { getHomeDir } from "@/home";
 
-const SESSION_DIR = "session";
-
 function getSessionDir(): string {
-  const dir = join(getHomeDir(), SESSION_DIR);
+  const dir = join(getHomeDir(), "memory", "session");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
   return dir;
 }
 
-function getSessionFilePath(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const h = String(now.getHours()).padStart(2, "0");
-  const min = String(now.getMinutes()).padStart(2, "0");
-  return join(getSessionDir(), `${y}-${m}-${d}-${h}${min}.md`);
+export function createSession(): string {
+  const id = randomUUID();
+  const path = join(getSessionDir(), `${id}.md`);
+  appendFileSync(path, `# Session ${id}\n\n`, "utf-8");
+  return id;
 }
 
-let _sessionPath: string | null = null;
-
-export function getSessionPath(): string {
-  if (!_sessionPath) {
-    _sessionPath = getSessionFilePath();
-  }
-  return _sessionPath;
+export function getSessionPath(sessionId: string): string {
+  return join(getSessionDir(), `${sessionId}.md`);
 }
 
-export function appendToSession(i: number, input: string, output: string): void {
-  const path = getSessionPath();
+export function appendToSession(sessionId: string, i: number, input: string, output: string): void {
+  const path = getSessionPath(sessionId);
   const block = `
 In[${i}]:= ${input}
 

@@ -53,7 +53,7 @@ program
 
 program
   .command("chat")
-  .description("Interactive REPL chat (In[i]/Out[i]), session saved to .agent/session/")
+  .description("Interactive REPL chat (In[i]/Out[i]), session saved to .agent/memory/session/")
   .option("--debug", "Show debug logs (may interleave with prompt)")
   .action(async (opts: { debug?: boolean }) => {
     try {
@@ -67,11 +67,11 @@ program
 
 program
   .command("think")
-  .description("Call default LLM with a question, get plain answer (no RAG, no skills)")
+  .description("Deep think: RAG + skills + tools (OpenClaw-style agent)")
   .argument("<question>", "Question text")
   .action(async (question: string) => {
     try {
-      const answer = await think(question);
+      const answer = await ask(question);
       console.log(answer);
     } catch (error) {
       const message = error instanceof Error ? error.message : "think_failed";
@@ -82,11 +82,11 @@ program
 
 program
   .command("ask")
-  .description("Ask question to LLM provider")
+  .description("Simple ask: direct LLM call (no RAG, no skills)")
   .argument("<question>", "Question text")
   .action(async (question: string) => {
     try {
-      const answer = await ask(question);
+      const answer = await think(question);
       console.log(answer);
     } catch (error) {
       const message = error instanceof Error ? error.message : "ask_failed";

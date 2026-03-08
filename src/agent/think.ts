@@ -4,8 +4,8 @@ import { replaceHardcode } from "@/utils/hardcode-codex";
 import { log } from "@/logger";
 
 /**
- * Call default LLM with a question, get a plain language answer.
- * No RAG, no skills—just raw LLM. Like exec but at LLM level.
+ * Simple ask: direct LLM call. No RAG, no skills, no tools.
+ * Built-in fallback for quick questions.
  */
 export async function think(question: string): Promise<string> {
   log.debug("[think] start");

@@ -1,6 +1,6 @@
 import * as readline from "readline";
 import { ask } from "@/provider/ask";
-import { appendToSession } from "@/agent/session";
+import { createSession, appendToSession } from "@/agent/session";
 import { METADATA } from "@/meta";
 import { log } from "@/logger";
 
@@ -38,6 +38,7 @@ export async function runChatRepl(opts?: { debug?: boolean }): Promise<void> {
   }
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const sessionId = createSession();
   let i = 0;
 
   const next = (): void => {
@@ -68,16 +69,16 @@ export async function runChatRepl(opts?: { debug?: boolean }): Promise<void> {
       try {
         const output = await ask(input);
         console.log(`\nOut[${i}]= ${output}\n`);
-        appendToSession(i, input, output);
+        appendToSession(sessionId, i, input, output);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`\nOut[${i}]= [error] ${msg}\n`);
-        appendToSession(i, input, `[error] ${msg}`);
+        appendToSession(sessionId, i, input, `[error] ${msg}`);
       }
       next();
     });
   };
 
-  console.log("Roy chat (In[i]/Out[i]). Commands: /clear /info. Type exit to quit.\n");
+  console.log(`Roy chat (In[i]/Out[i]). Session: ${sessionId}. Commands: /clear /info. Type exit to quit.\n`);
   prompt();
 }

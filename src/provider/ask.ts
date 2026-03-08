@@ -11,6 +11,7 @@ You have tools: bultin_think (reason through problems), bultin_exec (run shell c
 Use them ONLY when the user explicitly asks you to DO something: create files, run commands, remember X, recall/search memory, forget.
 For greetings and simple conversation—respond naturally as Roy. Do not call tools for "Hi" or casual chat.`;
 
+/** Deep think: full agent with RAG, skills, tools (OpenClaw-style). Used by chat and think command. */
 export async function ask(question: string): Promise<string> {
   log.debug("[ask] start");
   const cfg = getDefaultProvider();
