@@ -8,4 +8,4 @@ config({ path: join(homeDir, ".env"), quiet: true });
 process.env.LOG_LEVEL = getLogLevel();
 
 export { METADATA } from "@/meta";
-await import("@/shell");
+await import("@/console");

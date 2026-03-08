@@ -48,25 +48,6 @@ GUI includes:
 - Ask (with RAG context)
 - Runtime status panel
 
-## TUI
-
-Start TUI:
-
-```bash
-pnpm roy tui
-```
-
-Main screens:
-- Chat
-- Memory
-- Recall
-- Status
-
-Interaction rules:
-- Number + Enter only
-- `0` to go back / exit
-- Long text is paged by 10 lines
-
 ## Discord Bot Adapter
 
 Set token in [.home/.env](.home/.env):

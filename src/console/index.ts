@@ -6,9 +6,8 @@ import { getLlmStatus } from "@/provider";
 import { getEmbeddingStatus } from "@/rag/embedding";
 import { ask } from "@/provider/ask";
 import { forget, getMemoryKindCounts, getRagStatus, listMemories, recallScored, remember } from "@/rag";
-import { runMemoryExplorer } from "@/shell/memory-explorer";
+import { runMemoryExplorer } from "@/console/memory-explorer";
 import { startGuiServer } from "@/gui/server";
-import { runTui } from "@/shell/tui";
 import { startDiscordBot } from "@/integration/discord";
 import type { MemoryKind, MemoryScope } from "@/rag/types";
 
@@ -245,13 +244,6 @@ program
   .action((opts: { port?: string; open?: boolean }) => {
     const port = Number(opts.port) || 50777;
     startGuiServer({ port, open: Boolean(opts.open) });
-  });
-
-program
-  .command("tui")
-  .description("Start basic multi-screen TUI")
-  .action(async () => {
-    await runTui();
   });
 
 program
