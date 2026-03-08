@@ -7,5 +7,5 @@ export type ToolResult = {
 export type ToolDef = {
   name: string;
   prompt: string; // SKILL.md content for LLM
-  run: (args: Record<string, unknown>) => ToolResult;
+  run: (args: Record<string, unknown>) => ToolResult | Promise<ToolResult>;
 };

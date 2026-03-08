@@ -26,7 +26,7 @@ export async function ask(question: string): Promise<string> {
       ? `Memory Context:\n${context}\n\n---\nSkills:\n${skillsPrompt}`
       : `Skills:\n${skillsPrompt}`;
     const answer = await askDeepSeek(cfg, question, fullContext);
-    const { text } = parseAndRun(answer);
+    const { text } = await parseAndRun(answer);
     appendSessionAskToCache(question, text);
     return replaceHardcode(text) + SKILL_HINT;
   }

@@ -1,5 +1,6 @@
 import type { ToolDef, ToolResult } from "./toolbox";
 import { exec as execBultin } from "@/bultins/exec";
+import { runMemory } from "@/bultins/memory";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -28,6 +29,29 @@ registerTool({
   },
 });
 
+// Register bultin.memory
+registerTool({
+  name: "bultin.memory",
+  prompt: readFileSync(join(__dirname, "../bultins/memory/SKILL.md"), "utf-8"),
+  run: async (args) => {
+    const action = typeof args?.action === "string" ? args.action : "";
+    const r = await runMemory({
+      action: action as "store" | "recall" | "summary" | "forget",
+      content: typeof args?.content === "string" ? args.content : undefined,
+      query: typeof args?.query === "string" ? args.query : undefined,
+      id: typeof args?.id === "string" ? args.id : undefined,
+      kind: typeof args?.kind === "string" ? args.kind : undefined,
+      scope: typeof args?.scope === "string" ? args.scope : undefined,
+      limit: typeof args?.limit === "number" ? args.limit : undefined,
+    });
+    return {
+      result_code: r.result_code,
+      stdout: r.data ? JSON.stringify(r.data) : undefined,
+      stderr: r.stderr,
+    };
+  },
+});
+
 export type ToolCall = {
   tool: string;
   arguments: Record<string, unknown>;
@@ -51,7 +75,7 @@ export function getSkillsPrompt(): string {
 }
 
 /** Look up tool by name in register, run, return result. */
-function runTool(name: string, args: Record<string, unknown>): ToolResult {
+async function runTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
   const def = register.get(name);
   if (!def) {
     return { result_code: -1, stderr: `unknown_tool:${name}` };
@@ -63,7 +87,7 @@ function runTool(name: string, args: Record<string, unknown>): ToolResult {
  * If entire response is valid JSON tool call: look up in skills register,
  * run, output result (0) or error code.
  */
-export function parseAndRun(response: string): { text: string; result_code?: number } {
+export async function parseAndRun(response: string): Promise<{ text: string; result_code?: number }> {
   const raw = response.trim();
   let parsed: unknown;
   try {
@@ -74,7 +98,7 @@ export function parseAndRun(response: string): { text: string; result_code?: num
   if (!isValidToolCall(parsed)) {
     return { text: raw };
   }
-  const result = runTool(parsed.tool, parsed.arguments);
+  const result = await runTool(parsed.tool, parsed.arguments);
   const text = JSON.stringify({
     result_code: result.result_code,
     stdout: result.stdout,
