@@ -50,3 +50,25 @@ export function writeHardcode(data: HardcodeData): void {
 export function hardcodeExists(): boolean {
   return existsSync(getHardcodePath());
 }
+
+/**
+ * Read HARDCODE as a dynamic key-value map for replacement.
+ * Returns all top-level keys from the TOML file, values stringified.
+ */
+export function readHardcodeMap(): Record<string, string> {
+  const path = getHardcodePath();
+  if (!existsSync(path)) return {};
+  try {
+    const content = readFileSync(path, "utf-8");
+    const parsed = parse(content) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (v !== null && v !== undefined && typeof v !== "object") {
+        out[k] = String(v);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
