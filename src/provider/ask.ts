@@ -1,6 +1,7 @@
 import { getDefaultProvider } from "@/config";
 import { askDeepSeek } from "@/provider/deepseek";
-import { buildContext, rememberConversation } from "@/rag";
+import { buildContext } from "@/rag";
+import { appendSessionAskToCache } from "@/rag/session-cache";
 
 export async function ask(question: string): Promise<string> {
   const cfg = getDefaultProvider();
@@ -11,7 +12,7 @@ export async function ask(question: string): Promise<string> {
   if (cfg.provider.toLowerCase() === "deepseek" || cfg.name.toLowerCase() === "deepseek") {
     const context = await buildContext(question, 6, 3000);
     const answer = await askDeepSeek(cfg, question, context);
-    await rememberConversation(question, answer);
+    appendSessionAskToCache(question, answer);
     return answer;
   }
 

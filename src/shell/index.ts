@@ -9,7 +9,7 @@ import { forget, getMemoryKindCounts, getRagStatus, listMemories, recallScored, 
 import { runMemoryExplorer } from "@/shell/memory-explorer";
 import { startGuiServer } from "@/gui/server";
 import { runTui } from "@/shell/tui";
-import { startDiscordBot } from "@/discord/index";
+import { startDiscordBot } from "@/integration/discord";
 import type { MemoryKind, MemoryScope } from "@/rag/types";
 
 const program = new Command();

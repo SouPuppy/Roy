@@ -58,7 +58,12 @@ async function initialize_home(): Promise<boolean> {
 
 async function initialize_database(): Promise<void> {
   const homeDir = getHomeDir();
-  const dbPath = join(homeDir, "memory.db");
+  const memoryDir = join(homeDir, "memory");
+  const cacheDir = join(memoryDir, "cache");
+  mkdirSync(memoryDir, { recursive: true });
+  mkdirSync(cacheDir, { recursive: true });
+
+  const dbPath = join(memoryDir, "memory.db");
   const db = new Database(dbPath);
 
   db.exec(`

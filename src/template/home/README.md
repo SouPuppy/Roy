@@ -4,7 +4,7 @@
 
 - [`.env`](#env)
 - [`.config.toml`](#configtoml)
-- [`.memory.db`](#memorydb)
+- [`memory/`](#memory)
 - [`.vault/`](#vault)
 - [`.toolbox/`](#toolbox)
 
@@ -26,13 +26,12 @@ This is the global configuration for Roy. It contains the following sections:
 
 ---
 
-### `memory.db`
+### `memory/`
 
-This is the database for Roy. It contains the following tables/views:
+Memory storage directory:
 
-- `memory_records`: long-term memory archives
-- `skills`: skill archives
-- `tools`: tool definitions
+- `memory.db`: database with `memory_records`, `skills`, `tools`
+- `cache/`: session ask logs as `YYYY-MM-DD.md` (append-only, not in db)
 
 ---
 

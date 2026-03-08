@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { getHomeDir } from "@/home";
 import type { MemoryKind, MemoryListOptions, MemoryRecord, MemoryScope, MemorySummary } from "@/rag/types";
@@ -43,12 +44,22 @@ const MEMORY_KINDS: MemoryKind[] = ["identity", "task", "knowledge", "reference"
 let dbSingleton: Database.Database | null = null;
 let annStatus: AnnStatus = { enabled: false, message: "uninitialized" };
 
+const MEMORY_DIR = "memory";
+
 function getDbPath(): string {
-  return join(getHomeDir(), MEMORY_DB_FILENAME);
+  return join(getHomeDir(), MEMORY_DIR, MEMORY_DB_FILENAME);
+}
+
+function ensureMemoryDir(): void {
+  const dir = join(getHomeDir(), MEMORY_DIR);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
 }
 
 function getDb(): Database.Database {
   if (dbSingleton) return dbSingleton;
+  ensureMemoryDir();
   const db = new Database(getDbPath());
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
